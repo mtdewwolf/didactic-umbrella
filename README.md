@@ -1,6 +1,6 @@
 # VaultFlow — Inventory Management System
 
-A modern, responsive inventory management application built with vanilla JavaScript and Zustand for state management. Features a beautiful dark theme with glassmorphism effects and real-time inventory tracking.
+A modern, responsive inventory management application built with **Next.js 15**, **TypeScript**, and **Zustand** for state management. Features a beautiful dark theme with glassmorphism effects and real-time inventory tracking.
 
 ## 🚀 Features
 
@@ -42,11 +42,12 @@ A modern, responsive inventory management application built with vanilla JavaScr
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: Vanilla JavaScript (ES6+)
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
 - **State Management**: Zustand
-- **Styling**: CSS3 with CSS Grid and Flexbox
-- **Graphics**: HTML5 Canvas for procedural rendering
-- **Icons**: CSS-generated icons and gradients
+- **Styling**: Tailwind CSS with custom CSS variables
+- **UI Components**: Custom React components
+- **Deployment**: Vercel-ready
 
 ## 📦 Installation
 
@@ -56,9 +57,32 @@ git clone https://github.com/mtdewwolf/didactic-umbrella.git
 cd didactic-umbrella
 ```
 
-2. Open `index.html` in your web browser
+2. Install dependencies:
+```bash
+npm install
+```
 
-No build process required - this is a pure client-side application!
+3. Run the development server:
+```bash
+npm run dev
+```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Connect your repository to [Vercel](https://vercel.com)
+3. Deploy automatically with zero configuration
+
+### Manual Deployment
+
+```bash
+npm run build
+npm start
+```
 
 ## 🎮 Usage
 
@@ -109,17 +133,37 @@ ABC123,Sample Item,Electronics,A-01,50,10,25.99
 
 ### Project Structure
 ```
-didactic-umbrella/
-├── index.html          # Main application file
-├── README.md          # This file
-└── .gitignore         # Git ignore rules
+vaultflow-next/
+├── src/
+│   ├── app/                 # Next.js App Router
+│   │   ├── globals.css      # Global styles
+│   │   ├── layout.tsx       # Root layout
+│   │   └── page.tsx         # Main page
+│   ├── components/          # React components
+│   │   ├── Header.tsx
+│   │   ├── Sidebar.tsx
+│   │   ├── StatsCards.tsx
+│   │   ├── InventoryPanel.tsx
+│   │   ├── DashboardGrid.tsx
+│   │   ├── ActivityPanel.tsx
+│   │   ├── AddItemModal.tsx
+│   │   ├── Toast.tsx
+│   │   └── QuickAdjust.tsx
+│   ├── lib/                 # Utilities and store
+│   │   └── store.ts         # Zustand store
+│   └── types/               # TypeScript types
+│       └── inventory.ts     # Inventory interfaces
+├── public/                  # Static assets
+├── package.json
+├── tailwind.config.js
+└── README.md
 ```
 
 ### Key Components
-- **Zustand Store**: Central state management
-- **Canvas Renderer**: Procedural graphics generation
-- **Event Handlers**: User interaction management
-- **CSV Parser**: Data import/export functionality
+- **Zustand Store**: Central state management with TypeScript
+- **React Components**: Modular, reusable UI components
+- **TypeScript**: Full type safety throughout the application
+- **Tailwind CSS**: Utility-first styling with custom design system
 
 ## 🚀 Future Enhancements
 
@@ -131,6 +175,8 @@ didactic-umbrella/
 - [ ] API integration for backend services
 - [ ] Print-friendly reports
 - [ ] Advanced filtering and sorting
+- [ ] Real-time collaboration with WebSockets
+- [ ] PWA capabilities
 
 ## 📝 License
 
@@ -150,4 +196,4 @@ For questions or support, please open an issue on GitHub.
 
 ---
 
-**VaultFlow** - Modern inventory management made simple and beautiful. 
+**VaultFlow** - Modern inventory management made simple and beautiful with Next.js and TypeScript. 
