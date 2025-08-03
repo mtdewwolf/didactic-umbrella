@@ -1,0 +1,21 @@
+module default {
+  type InventoryItem {
+    required sku: str;
+    required name: str;
+    required category: str;
+    required location: str;
+    required qty: int64;
+    required reorder: int64;
+    required cost: float64;
+    required created_at: datetime;
+    required updated_at: datetime;
+  }
+
+  type ActivityLog {
+    required type: str;
+    optional sku: str;
+    optional delta: int64;
+    optional count: int64;
+    required at: datetime;
+  }
+} 

@@ -1,0 +1,15 @@
+[gel]
+version = "1.0"
+
+[gel.database]
+host = "localhost"
+port = 5656
+database = "goldmine_distro"
+user = "gel"
+password = ""
+
+[gel.schema]
+path = "schema.gel"
+
+[gel.migrations]
+path = "migrations" 
