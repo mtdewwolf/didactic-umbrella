@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VaultFlow — Inventory Management</title>
+  <style>
+    :root{
+      --bg: #0c0f14;
+      --bg-elev: #121622;
+      --bg-elev-2: #161b2a;
+      --panel: #0f1420;
+      --text: #e9ecf5;
+      --muted: #9aa4b2;
+      --accent: #6dd6ff;
+      --accent-2: #7b6dff;
+      --accent-3: #2fe4b9;
+      --danger: #ff6d8a;
+      --warning: #ffc658;
+      --ok: #76e38a;
+      --chip: #1b2133;
+      --chip-2: #1b2230;
+      --border: rgba(255,255,255,0.06);
+      --shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.04);
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+      --blur: saturate(120%) blur(6px);
+      --grad-1: radial-gradient(1200px 700px at 90% -10%, rgba(125, 96, 255, 0.2), transparent 60%), radial-gradient(900px 600px at -20% 10%, rgba(61, 171, 255, 0.18), transparent 60%);
+    }
+    * { box-sizing: border-box }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial;
+      letter-spacing: 0.2px;
+    }
+    body {
+      margin: 0;
+      background-image: var(--grad-1);
+    }
+    .noise, .glow {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    }
+    .noise {
+      background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.015), rgba(255,255,255,0.015) 1px, transparent 1px, transparent 2px),
+                        repeating-linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.01) 1px, transparent 1px, transparent 2px);
+      mix-blend-mode: overlay;
+    }
+    .glow::before, .glow::after {
+      content: "";
+      position: absolute;
+      filter: blur(90px);
+      opacity: 0.45;
+      border-radius: 50%;
+    }
+    .glow::before {
+      width: 40vw; height: 40vw; left: -10vw; top: -5vw;
+      background: radial-gradient(circle at 30% 30%, rgba(109,214,255,0.35), transparent 60%);
+    }
+    .glow::after {
+      width: 55vw; height: 55vw; right: -20vw; bottom: -10vw;
+      background: radial-gradient(circle at 70% 70%, rgba(123,109,255,0.25), transparent 60%);
+    }
+
+    header.appbar {
+      position: sticky; top: 0; z-index: 10;
+      background: color-mix(in oklab, var(--bg) 70%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .appbar-inner {
+      display: grid;
+      grid-template-columns: 260px 1fr auto;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 20px;
+      max-width: 1320px; margin: 0 auto;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .brand .logo {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: conic-gradient(from 120deg, var(--accent), var(--accent-2), var(--accent-3), var(--accent));
+      box-shadow: 0 8px 20px rgba(109,214,255,0.25), inset 0 0 0 2px rgba(255,255,255,0.08);
+      position: relative;
+    }
+    .brand .logo::after {
+      content:""; position:absolute; inset:4px; border-radius:8px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15), transparent 60%);
+    }
+    .brand h1 {
+      margin: 0; font-weight: 700; font-size: 18px; letter-spacing: .6px;
+    }
+    .searchbar {
+      display: flex; gap: 10px;
+      background: var(--bg-elev);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 8px 12px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+    }
+    .searchbar input {
+      flex: 1; background: transparent; border: none; outline: none; color: var(--text);
+      font-size: 14px;
+    }
+    .searchbar .kbd {
+      color: var(--muted); font-size: 12px; padding: 4px 8px; border-radius: 6px; background: var(--chip); border: 1px solid var(--border);
+    }
+    .actions {
+      display: flex; gap: 10px; align-items: center;
+    }
+    .btn {
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.1));
+      color: var(--text);
+      padding: 10px 14px; border-radius: 12px; cursor: pointer; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 10px;
+      transition: transform .15s ease, background .2s ease, border-color .2s ease;
+      box-shadow: var(--shadow);
+    }
+    .btn:hover { transform: translateY(-1px); border-color: rgba(255,255,255,0.12) }
+    .btn.primary {
+      background: linear-gradient(180deg, rgba(109,214,255,0.18), rgba(109,214,255,0.06));
+      border-color: rgba(109,214,255,0.25);
+      box-shadow: 0 8px 28px rgba(109,214,255,0.18);
+    }
+    .btn.danger {
+      background: linear-gradient(180deg, rgba(255,109,138,0.18), rgba(255,109,138,0.06));
+      border-color: rgba(255,109,138,0.25);
+      box-shadow: 0 8px 28px rgba(255,109,138,0.18);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1320px; margin: 0 auto;
+    }
+    aside.sidebar {
+      position: sticky; top: 86px; align-self: start;
+      background: color-mix(in oklab, var(--bg-elev) 85%, transparent);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .nav-group {
+      padding: 16px;
+      border-bottom: 1px dashed var(--border);
+    }
+    .nav-group:last-child { border-bottom: none }
+    .nav-title { color: var(--muted); font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; margin: 8px 8px 12px }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px; border-radius: 10px; cursor: pointer; color: var(--text);
+      border: 1px solid transparent;
+    }
+    .nav-item:hover { background: var(--bg-elev-2); border-color: var(--border) }
+    .nav-item.active {
+      background: linear-gradient(180deg, rgba(123,109,255,0.18), rgba(123,109,255,0.06));
+      border-color: rgba(123,109,255,0.25);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    }
+
+    main.content {
+      display: grid; gap: 20px;
+    }
+    .cards {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    }
+    .card {
+      background: color-mix(in oklab, var(--panel) 95%, transparent);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .card .em {
+      font-size: 28px; font-weight: 800; letter-spacing: .4px;
+    }
+    .card .sub { color: var(--muted); font-size: 12px; margin-top: 4px }
+    .card.accent::after {
+      content: ""; position: absolute; inset: -1px -1px auto -1px; height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3));
+      opacity: .7;
+    }
+
+    .panel {
+      background: color-mix(in oklab, var(--panel) 95%, transparent);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px; border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    }
+    .panel-title { font-weight: 700; letter-spacing: .4px }
+    .panel-body { padding: 16px }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap }
+    .chip {
+      background: var(--chip);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 10px; font-size: 12px; color: var(--muted);
+      user-select: none;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+    }
+    .table thead th {
+      text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 0 12px 6px;
+    }
+    .table tbody tr {
+      background: var(--bg-elev);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+    }
+    .table tbody tr td {
+      padding: 14px 12px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .table tbody tr td:first-child {
+      border-left: 1px solid var(--border); border-top-left-radius: 12px; border-bottom-left-radius: 12px;
+    }
+    .table tbody tr td:last-child {
+      border-right: 1px solid var(--border); border-top-right-radius: 12px; border-bottom-right-radius: 12px;
+    }
+    .status { padding: 6px 10px; border-radius: 999px; font-weight: 700; font-size: 11px; letter-spacing: .6px; }
+    .status.ok { background: rgba(118,227,138,0.12); color: var(--ok); border: 1px solid rgba(118,227,138,0.25) }
+    .status.low { background: rgba(255,198,88,0.12); color: var(--warning); border: 1px solid rgba(255,198,88,0.25) }
+    .status.oos { background: rgba(255,109,138,0.12); color: var(--danger); border: 1px solid rgba(255,109,138,0.25) }
+
+    .toolbar {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    }
+    .toolbar .seg {
+      background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: inline-flex;
+    }
+    .toolbar .seg button {
+      background: transparent; color: var(--muted); border: none; padding: 8px 12px; cursor: pointer; font-weight: 700;
+    }
+    .toolbar .seg button.active { color: var(--text); background: var(--bg-elev-2) }
+
+    .grid {
+      display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px;
+    }
+    .kanban {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+    }
+    .col {
+      background: var(--bg-elev);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px; min-height: 180px;
+    }
+    .col h4 { margin: 4px 2px 10px; color: var(--muted); text-transform: uppercase; font-size: 11px; letter-spacing: .8px }
+    .ticket {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 10px; margin-bottom: 10px;
+      box-shadow: var(--shadow); cursor: grab;
+    }
+    .ticket .title { font-weight: 700 }
+    .ticket .meta { font-size: 12px; color: var(--muted) }
+
+    .detail {
+      display: grid; grid-template-columns: 1fr; gap: 12px;
+    }
+    .detail .preview {
+      height: 210px; border-radius: var(--radius-md); border: 1px solid var(--border);
+      background: radial-gradient(600px 300px at 85% 10%, rgba(109,214,255,0.25), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+      position: relative; overflow: hidden;
+    }
+    .preview-canvas { position: absolute; inset: 0; width: 100%; height: 100% }
+    .detail .info {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    }
+    .info .i {
+      background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; padding: 10px;
+    }
+    .muted { color: var(--muted) }
+
+    .floating {
+      position: fixed; right: 22px; bottom: 22px; z-index: 11; display: grid; gap: 10px;
+    }
+    .fab {
+      padding: 14px 18px; border-radius: 16px; font-weight: 800;
+      background: linear-gradient(180deg, rgba(47,228,185,0.18), rgba(47,228,185,0.06));
+      border: 1px solid rgba(47,228,185,0.25);
+      box-shadow: 0 10px 32px rgba(47,228,185,0.22);
+      cursor: pointer;
+    }
+    .toast {
+      position: fixed; left: 50%; transform: translateX(-50%);
+      bottom: -80px; transition: bottom .5s cubic-bezier(.19,1,.22,1);
+      background: var(--bg-elev-2); border: 1px solid var(--border); border-radius: 999px; padding: 10px 14px; color: var(--text);
+      box-shadow: var(--shadow); z-index: 20;
+    }
+    .toast.show { bottom: 20px }
+
+    .empty {
+      text-align: center; padding: 40px 10px; color: var(--muted);
+    }
+
+    .hidden { display: none !important }
+
+    /* Add Item Modal */
+    .modal {
+      position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 30;
+    }
+    .modal.show { display: flex }
+    .modal .backdrop {
+      position: absolute; inset: 0; backdrop-filter: blur(6px); background: rgba(0,0,0,0.45);
+    }
+    .modal .dialog {
+      position: relative; width: min(720px, 92vw);
+      background: var(--bg-elev);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .dialog-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    }
+    .dialog-title { font-weight: 800 }
+    .dialog-body { padding: 14px 16px; display: grid; gap: 12px }
+    .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px }
+    .form-row { display: grid; gap: 6px }
+    label { font-size: 12px; color: var(--muted) }
+    input[type="text"], input[type="number"] {
+      background: var(--bg-elev-2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 10px; padding: 10px; outline: none; width: 100%;
+    }
+    .dialog-footer {
+      padding: 12px 16px; display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid var(--border);
+      background: linear-gradient(0deg, rgba(255,255,255,0.02), transparent);
+    }
+    .seg-switch { background: var(--bg-elev-2); border: 1px solid var(--border); border-radius: 10px; display: inline-flex; overflow: hidden }
+    .seg-switch button { background: transparent; color: var(--muted); border: none; padding: 8px 12px; cursor: pointer; font-weight: 700 }
+    .seg-switch button.active { color: var(--text); background: var(--bg-elev) }
+    .scan-hint { font-size: 12px; color: var(--muted) }
+    .barcode-preview {
+      height: 80px; border-radius: 10px; border: 1px dashed var(--border); display: grid; place-items: center; color: var(--muted);
+      background: repeating-linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.08) 2px, transparent 2px, transparent 6px);
+    }
+
+    @media (max-width: 1100px) {
+      .cards { grid-template-columns: repeat(2, 1fr) }
+      .grid { grid-template-columns: 1fr }
+    }
+    @media (max-width: 820px) {
+      .layout { grid-template-columns: 1fr }
+      aside.sidebar { position: relative; top: 0 }
+      .appbar-inner { grid-template-columns: 1fr; gap: 10px }
+      .form-grid { grid-template-columns: 1fr 1fr }
+    }
+    @media (max-width: 520px) {
+      .form-grid { grid-template-columns: 1fr }
+    }
+  </style>
+  <meta name="color-scheme" content="dark">
+  <script type="importmap">
+    {
+      "imports": {
+        "zustand": "https://cdn.jsdelivr.net/npm/zustand/esm/index.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="noise"></div>
+  <div class="glow"></div>
+
+  <header class="appbar">
+    <div class="appbar-inner">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <h1>VaultFlow — Inventory</h1>
+      </div>
+      <div class="searchbar">
+        <input id="search" placeholder="Search SKU, name, location, supplier…" />
+        <span class="kbd">⌘ K</span>
+      </div>
+      <div class="actions">
+        <button class="btn" id="importBtn">Import CSV</button>
+        <button class="btn primary" id="addItemBtn">+ New Item</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="nav-group">
+        <div class="nav-title">Navigation</div>
+        <div class="nav-item active" data-view="dashboard">Dashboard</div>
+        <div class="nav-item" data-view="inventory">Inventory</div>
+        <div class="nav-item" data-view="orders">Orders</div>
+        <div class="nav-item" data-view="suppliers">Suppliers</div>
+        <div class="nav-item" data-view="locations">Locations</div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-title">Quick Filters</div>
+        <div class="chips">
+          <span class="chip" data-filter="low">Low Stock</span>
+          <span class="chip" data-filter="oos">Out of Stock</span>
+          <span class="chip" data-filter="perishable">Perishable</span>
+          <span class="chip" data-filter="overstock">Overstock</span>
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-title">Warehouses</div>
+        <div class="nav-item" data-warehouse="A">North A</div>
+        <div class="nav-item" data-warehouse="B">Central B</div>
+        <div class="nav-item" data-warehouse="C">South C</div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section class="cards">
+        <div class="card accent">
+          <div class="em" id="statTotal">0</div>
+          <div class="sub">Total SKUs</div>
+        </div>
+        <div class="card">
+          <div class="em" id="statQty">0</div>
+          <div class="sub">Total Units</div>
+        </div>
+        <div class="card">
+          <div class="em" id="statLow">0</div>
+          <div class="sub">Low Stock Items</div>
+        </div>
+        <div class="card">
+          <div class="em" id="statVal">$0</div>
+          <div class="sub">Inventory Value</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Inventory</div>
+          <div class="toolbar">
+            <div class="seg" id="viewSwitch">
+              <button class="active" data-mode="table">Table</button>
+              <button data-mode="kanban">Kanban</button>
+            </div>
+            <button class="btn" id="exportBtn">Export CSV</button>
+            <button class="btn danger" id="clearBtn">Clear</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="tableView">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  <th>Item</th>
+                  <th>Category</th>
+                  <th>Location</th>
+                  <th>Qty</th>
+                  <th>Reorder</th>
+                  <th>Status</th>
+                  <th>Unit Cost</th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+          <div id="kanbanView" style="display:none">
+            <div class="kanban">
+              <div class="col" data-col="ok">
+                <h4>Healthy</h4>
+                <div class="tickets" id="kb-ok"></div>
+              </div>
+              <div class="col" data-col="low">
+                <h4>Low</h4>
+                <div class="tickets" id="kb-low"></div>
+              </div>
+              <div class="col" data-col="oos">
+                <h4>Out of Stock</h4>
+                <div class="tickets" id="kb-oos"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid" data-page="dashboard">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Restock Planner</div>
+            <div class="chips" id="plannerChips"></div>
+          </div>
+          <div class="panel-body">
+            <div class="kanban">
+              <div class="col">
+                <h4>Reorder Soon</h4>
+                <div id="plan-soon"></div>
+              </div>
+              <div class="col">
+                <h4>Pending PO</h4>
+                <div id="plan-po"></div>
+              </div>
+              <div class="col">
+                <h4>Received</h4>
+                <div id="plan-done"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Item Detail</div>
+            <div class="chips"><span class="chip" id="detailSKU">—</span></div>
+          </div>
+          <div class="panel-body detail">
+            <div class="preview">
+              <canvas class="preview-canvas" id="preview"></canvas>
+            </div>
+            <div class="info">
+              <div class="i"><div class="muted">Name</div><div id="detailName">—</div></div>
+              <div class="i"><div class="muted">Category</div><div id="detailCat">—</div></div>
+              <div class="i"><div class="muted">Location</div><div id="detailLoc">—</div></div>
+              <div class="i"><div class="muted">Quantity</div><div id="detailQty">—</div></div>
+              <div class="i"><div class="muted">Reorder Point</div><div id="detailReorder">—</div></div>
+              <div class="i"><div class="muted">Unit Cost</div><div id="detailCost">—</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" data-page="activity">
+        <div class="panel-header">
+          <div class="panel-title">Activity</div>
+          <div class="chips">
+            <span class="chip">Recent</span><span class="chip">Adjustments</span><span class="chip">Orders</span>
+          </div>
+        </div>
+        <div class="panel-body" id="activityLog">
+          <div class="empty">No activity yet. Start by adding items or importing CSV.</div>
+        </div>
+      </section>
+
+      <section class="panel hidden" data-page="orders">
+        <div class="panel-header">
+          <div class="panel-title">Orders</div>
+          <div class="chips"><span class="chip">PO</span><span class="chip">SO</span></div>
+        </div>
+        <div class="panel-body" id="ordersPanel">
+          <div class="empty">No orders yet. Create a Purchase Order from Restock Planner.</div>
+        </div>
+      </section>
+
+      <section class="panel hidden" data-page="suppliers">
+        <div class="panel-header">
+          <div class="panel-title">Suppliers</div>
+          <div class="chips"><span class="chip">All</span><span class="chip">Preferred</span></div>
+        </div>
+        <div class="panel-body" id="suppliersPanel">
+          <div class="empty">No suppliers configured. Add supplier records via CSV import.</div>
+        </div>
+      </section>
+
+      <section class="panel hidden" data-page="locations">
+        <div class="panel-header">
+          <div class="panel-title">Locations</div>
+          <div class="chips"><span class="chip">Aisles</span><span class="chip">Bins</span></div>
+        </div>
+        <div class="panel-body" id="locationsPanel">
+          <div class="empty">Define locations by tagging items or importing a location map.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="floating">
+    <button class="btn fab" id="quickAdjust">Quick Adjust</button>
+  </div>
+
+  <div class="toast" id="toast">Saved</div>
+
+  <!-- Add Item Modal -->
+  <div class="modal" id="addModal" aria-hidden="true">
+    <div class="backdrop"></div>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+      <div class="dialog-header">
+        <div class="dialog-title" id="addTitle">Add New Item</div>
+        <div class="seg-switch" id="addModeSwitch">
+          <button class="active" data-mode="manual">Manual</button>
+          <button data-mode="scan">Barcode</button>
+        </div>
+      </div>
+      <div class="dialog-body">
+        <form id="addForm" autocomplete="off">
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="sku">SKU</label>
+              <input type="text" id="sku" placeholder="Scan or generate…" />
+            </div>
+            <div class="form-row">
+              <label for="name">Name</label>
+              <input type="text" id="name" placeholder="Item name" required />
+            </div>
+            <div class="form-row">
+              <label for="category">Category</label>
+              <input type="text" id="category" placeholder="Category e.g. Hardware" />
+            </div>
+            <div class="form-row">
+              <label for="location">Location</label>
+              <input type="text" id="location" placeholder="A-01" />
+            </div>
+            <div class="form-row">
+              <label for="qty">Quantity</label>
+              <input type="number" id="qty" min="0" step="1" value="0" />
+            </div>
+            <div class="form-row">
+              <label for="reorder">Reorder Point</label>
+              <input type="number" id="reorder" min="0" step="1" value="10" />
+            </div>
+            <div class="form-row">
+              <label for="cost">Unit Cost</label>
+              <input type="number" id="cost" min="0" step="0.01" value="1.00" />
+            </div>
+          </div>
+          <div class="scan-hint" id="scanHint" style="display:none">
+            Tip: Click the SKU field and scan a barcode with your USB scanner. Most scanners send the digits then Enter.
+          </div>
+          <div class="barcode-preview" id="barcodePreview" style="display:none">Scan preview</div>
+        </form>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn" id="cancelAdd">Cancel</button>
+        <button class="btn" id="genSku">Generate SKU</button>
+        <button class="btn primary" id="saveAdd">Save Item</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import create from "zustand";
+
+    // Store
+    const useStore = create((set, get) => ({
+      items: seedItems(),
+      selected: null,
+      filter: "",
+      mode: "table",
+      activity: [],
+      setMode: (mode) => set({mode}),
+      setFilter: (filter) => set({filter}),
+      addItem: (item) => set(s => ({ items: [...s.items, item], activity: [{type:'add', sku:item.sku, at:new Date()}, ...s.activity] })),
+      clear: () => set(s => ({ items: [], selected: null, activity: [{type:'clear', at:new Date()}, ...s.activity] })),
+      select: (sku) => set({ selected: sku }),
+      adjust: (sku, delta) => set(s => {
+        const items = s.items.map(it => it.sku === sku ? {...it, qty: Math.max(0, it.qty + delta)} : it);
+        return { items, activity: [{type: 'adjust', sku, delta, at: new Date()}, ...s.activity] }
+      }),
+      importCSV: (text) => {
+        const rows = text.trim().split(/\r?\n/);
+        const header = rows.shift().split(",");
+        const items = rows.filter(Boolean).map(r => {
+          const vals = r.split(",");
+          const map = Object.fromEntries(header.map((h,i)=>[h.trim(), (vals[i]??"").trim()]));
+          const cost = parseFloat(map.cost || "0");
+          return {
+            sku: map.sku || nanoid(),
+            name: map.name || "Unnamed",
+            category: map.category || "General",
+            location: map.location || "A-01",
+            qty: Number.isFinite(+map.qty) ? +map.qty : 0,
+            reorder: Number.isFinite(+map.reorder) ? +map.reorder : 10,
+            cost: Number.isFinite(cost) ? +cost : 0
+          }
+        });
+        set(s => ({ items: [...s.items, ...items], activity: [{type:'import', count: items.length, at: new Date()}, ...s.activity]}))
+      },
+      exportCSV: () => {
+        const {items} = get();
+        const header = "sku,name,category,location,qty,reorder,cost";
+        const rows = items.map(i=>[i.sku,i.name,i.category,i.location,i.qty,i.reorder,i.cost].join(","));
+        const csv = [header, ...rows].join("\n");
+        downloadFile("inventory.csv", csv, "text/csv");
+      }
+    }));
+
+    // Utils
+    function nanoid(size=8){
+      const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let id=''; for (let i=0;i<size;i++) id+=chars[Math.floor(Math.random()*chars.length)];
+      return id;
+    }
+    function downloadFile(name, content, type){
+      const blob = new Blob([content], {type});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = name; a.click();
+      setTimeout(()=>URL.revokeObjectURL(url), 500);
+    }
+    function currency(n){ return "$" + n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+    function statusOf(it){
+      if(it.qty === 0) return "oos";
+      if(it.qty <= it.reorder) return "low";
+      return "ok";
+    }
+
+    // Seed data
+    function seedItems(){
+      const cats = ["Beverages","Produce","Electronics","Hardware","Pharma","Textiles","Automotive","Home"];
+      const locs = ["A-01","A-02","B-10","B-22","C-05","D-11","E-03","F-18","G-07","H-04"];
+      const items = [];
+      for(let i=0;i<24;i++){
+        const qty = Math.floor(Math.random()*160);
+        const reorder = [10,20,30,40][Math.floor(Math.random()*4)];
+        items.push({
+          sku: nanoid(),
+          name: sampleName(),
+          category: cats[Math.floor(Math.random()*cats.length)],
+          location: locs[Math.floor(Math.random()*locs.length)],
+          qty, reorder,
+          cost: +(Math.random()*150 + 2).toFixed(2)
+        });
+      }
+      return items;
+    }
+    function sampleName(){
+      const adj=["Fresh","Premium","Ultra","Eco","Smart","Rapid","Nano","Fusion","Crystal","Quantum","Aero","Polar"];
+      const noun=["Mixer","Valve","Sensor","Pack","Bottle","Kit","Module","Panel","Glove","Lens","Drive","Clamp"];
+      return adj[Math.floor(Math.random()*adj.length)]+" "+noun[Math.floor(Math.random()*noun.length)];
+    }
+
+    // DOM Refs
+    const rowsEl = document.getElementById("rows");
+    const kbOk = document.getElementById("kb-ok");
+    const kbLow = document.getElementById("kb-low");
+    const kbOos = document.getElementById("kb-oos");
+    const tableView = document.getElementById("tableView");
+    const kanbanView = document.getElementById("kanbanView");
+    const statTotal = document.getElementById("statTotal");
+    const statQty = document.getElementById("statQty");
+    const statLow = document.getElementById("statLow");
+    const statVal = document.getElementById("statVal");
+    const search = document.getElementById("search");
+    const detail = {
+      sku: document.getElementById("detailSKU"),
+      name: document.getElementById("detailName"),
+      cat: document.getElementById("detailCat"),
+      loc: document.getElementById("detailLoc"),
+      qty: document.getElementById("detailQty"),
+      reorder: document.getElementById("detailReorder"),
+      cost: document.getElementById("detailCost"),
+      canvas: document.getElementById("preview")
+    };
+    const activityLog = document.getElementById("activityLog");
+    const toast = document.getElementById("toast");
+
+    // Render Functions
+    function render(){
+      const {items, filter, mode, selected, activity} = useStore.getState();
+      const f = filter.toLowerCase().trim();
+      const filtered = items.filter(it => {
+        const base = [it.sku, it.name, it.category, it.location].join(" ").toLowerCase();
+        if(f==="low") return statusOf(it)==="low";
+        if(f==="oos") return statusOf(it)==="oos";
+        return base.includes(f);
+      });
+      // Stats
+      statTotal.textContent = String(items.length);
+      statQty.textContent = String(items.reduce((a,b)=>a+b.qty,0));
+      statLow.textContent = String(items.filter(it=>statusOf(it)!=="ok").length);
+      statVal.textContent = currency(items.reduce((a,b)=>a+b.cost*b.qty,0));
+
+      // Table
+      rowsEl.innerHTML = "";
+      filtered.forEach(it=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>${it.sku}</strong></td>
+          <td>${it.name}</td>
+          <td>${it.category}</td>
+          <td>${it.location}</td>
+          <td>${it.qty}</td>
+          <td>${it.reorder}</td>
+          <td>${badge(statusOf(it))}</td>
+          <td>${currency(it.cost)}</td>
+        `;
+        tr.addEventListener("click", () => {
+          useStore.getState().select(it.sku);
+          showToast("Selected " + it.sku);
+          renderDetail(); // ensure detail updates immediately
+        });
+        rowsEl.appendChild(tr);
+      });
+
+      // Kanban
+      kbOk.innerHTML = ""; kbLow.innerHTML = ""; kbOos.innerHTML = "";
+      filtered.forEach(it=>{
+        const card = document.createElement("div");
+        card.className = "ticket";
+        card.draggable = true;
+        card.innerHTML = `
+          <div class="title">${it.name}</div>
+          <div class="meta">${it.sku} • ${it.location} • ${currency(it.cost)}</div>
+          <div class="meta">Qty: ${it.qty} / Reorder ${it.reorder}</div>
+        `;
+        card.addEventListener("dragstart", e => {
+          e.dataTransfer.setData("text/plain", it.sku);
+        });
+        const st = statusOf(it);
+        if(st==="ok") kbOk.appendChild(card);
+        if(st==="low") kbLow.appendChild(card);
+        if(st==="oos") kbOos.appendChild(card);
+      });
+
+      // Mode
+      if(mode==="table"){ tableView.style.display="block"; kanbanView.style.display="none"; }
+      else { tableView.style.display="none"; kanbanView.style.display="block"; }
+
+      // Detail and Activity
+      renderDetail(filtered);
+      renderActivity(activity);
+    }
+
+    function renderDetail(filteredList){
+      const {items, selected} = useStore.getState();
+      const list = filteredList ?? items;
+      const current = selected ? items.find(i=>i.sku===selected) : list[0];
+      if(current){
+        detail.sku.textContent = current.sku;
+        detail.name.textContent = current.name;
+        detail.cat.textContent = current.category;
+        detail.loc.textContent = current.location;
+        detail.qty.textContent = current.qty;
+        detail.reorder.textContent = current.reorder;
+        detail.cost.textContent = currency(current.cost);
+        drawPreview(detail.canvas, current);
+      } else {
+        detail.sku.textContent = "—"; detail.name.textContent = "—"; detail.cat.textContent = "—";
+        detail.loc.textContent = "—"; detail.qty.textContent = "—"; detail.reorder.textContent = "—"; detail.cost.textContent = "—";
+        clearCanvas(detail.canvas);
+      }
+    }
+
+    function badge(st){
+      const map = { ok: "ok", low: "low", oos: "oos" };
+      const label = { ok: "OK", low: "LOW", oos: "OUT" }[st];
+      return `<span class="status ${map[st]}">${label}</span>`;
+    }
+
+    function renderActivity(list){
+      if(!list.length){
+        activityLog.innerHTML = '<div class="empty">No activity yet. Start by adding items or importing CSV.</div>';
+        return;
+      }
+      activityLog.innerHTML = "";
+      list.slice(0,12).forEach(ev => {
+        const line = document.createElement("div");
+        line.style.padding = "8px 0";
+        const time = new Date(ev.at).toLocaleTimeString();
+        if(ev.type==="adjust")
+          line.innerHTML = `<span class="chip">Adjust</span> SKU <strong>${ev.sku}</strong> qty ${ev.delta>0?"+":""}${ev.delta} <span class="muted">at ${time}</span>`;
+        if(ev.type==="import")
+          line.innerHTML = `<span class="chip">Import</span> Added <strong>${ev.count}</strong> items <span class="muted">at ${time}</span>`;
+        if(ev.type==="add")
+          line.innerHTML = `<span class="chip">New</span> Added SKU <strong>${ev.sku}</strong> <span class="muted">at ${time}</span>`;
+        if(ev.type==="clear")
+          line.innerHTML = `<span class="chip">Clear</span> Inventory cleared <span class="muted">at ${time}</span>`;
+        activityLog.appendChild(line);
+      });
+    }
+
+    // Interactions
+    document.getElementById("viewSwitch").addEventListener("click", (e)=>{
+      if(e.target.tagName!=="BUTTON") return;
+      [...e.currentTarget.children].forEach(b=>b.classList.remove("active"));
+      e.target.classList.add("active");
+      useStore.getState().setMode(e.target.dataset.mode);
+      render();
+    });
+
+    // Simple view router
+    const pageSections = {
+      dashboard: document.querySelector('[data-page="dashboard"]'),
+      activity: document.querySelector('[data-page="activity"]'),
+      orders: document.querySelector('[data-page="orders"]'),
+      suppliers: document.querySelector('[data-page="suppliers"]'),
+      locations: document.querySelector('[data-page="locations"]')
+    };
+    function showPage(view){
+      Object.values(pageSections).forEach(sec => sec.classList.add("hidden"));
+      if(view==="dashboard" || view==="inventory"){ // inventory shares dashboard widgets
+        pageSections.dashboard.classList.remove("hidden");
+        pageSections.activity.classList.remove("hidden");
+      } else {
+        (pageSections[view]||pageSections.dashboard).classList.remove("hidden");
+      }
+    }
+    document.querySelectorAll(".nav-item[data-view]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        document.querySelectorAll(".nav-item[data-view]").forEach(n=>n.classList.remove("active"));
+        el.classList.add("active");
+        const view = el.dataset.view;
+        showPage(view);
+        showToast("Switched to " + view.charAt(0).toUpperCase() + view.slice(1));
+      });
+    });
+
+    // Warehouse filter (scopes search to location prefix)
+    document.querySelectorAll(".nav-item[data-warehouse]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        document.querySelectorAll(".nav-item[data-warehouse]").forEach(n=>n.classList.remove("active"));
+        el.classList.add("active");
+        const code = el.dataset.warehouse;
+        const s = useStore.getState();
+        s.setFilter(code.toLowerCase());
+        search.value = code;
+        render();
+        showToast("Filtered by warehouse " + code);
+      });
+    });
+
+    // Quick filter chips
+    document.querySelectorAll(".chip[data-filter]").forEach(ch=>{
+      ch.addEventListener("click", ()=>{
+        const f = ch.dataset.filter;
+        const s = useStore.getState();
+        let val = "";
+        if(f==="low") val = "low";
+        else if(f==="oos") val = "oos";
+        else if(f==="perishable") val = "produce"; // demo: map perishable -> produce
+        else if(f==="overstock") val = ""; // no special logic, clear
+        s.setFilter(val);
+        search.value = val;
+        render();
+      });
+    });
+
+    // Drag targets to adjust status via columns
+    document.querySelectorAll(".col").forEach(col=>{
+      col.addEventListener("dragover", e=> e.preventDefault());
+      col.addEventListener("drop", e=>{
+        e.preventDefault();
+        const sku = e.dataTransfer.getData("text/plain");
+        const target = col.dataset.col;
+        const st = useStore.getState();
+        const item = st.items.find(i=>i.sku===sku);
+        if(!item) return;
+        if(target==="oos") item.qty = 0;
+        if(target==="low") item.qty = Math.min(item.qty, item.reorder);
+        if(target==="ok") item.qty = Math.max(item.qty, item.reorder + 1);
+        st.select(sku);
+        render();
+        showToast("Updated " + sku + " → " + (target?target.toUpperCase():"BUCKET"));
+      });
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", ()=> {
+      useStore.getState().exportCSV();
+      showToast("Exported CSV");
+    });
+    document.getElementById("clearBtn").addEventListener("click", ()=>{
+      useStore.getState().clear();
+      render();
+      showToast("Inventory cleared");
+    });
+
+    // New Item modal open
+    const addModal = document.getElementById("addModal");
+    const skuInp = document.getElementById("sku");
+    const nameInp = document.getElementById("name");
+    const catInp = document.getElementById("category");
+    const locInp = document.getElementById("location");
+    const qtyInp = document.getElementById("qty");
+    const reorderInp = document.getElementById("reorder");
+    const costInp = document.getElementById("cost");
+    const addForm = document.getElementById("addForm");
+    const addSwitch = document.getElementById("addModeSwitch");
+    const scanHint = document.getElementById("scanHint");
+    const barcodePreview = document.getElementById("barcodePreview");
+
+    function openAddModal(){
+      // Prefill defaults
+      skuInp.value = "";
+      nameInp.value = "";
+      catInp.value = "";
+      locInp.value = "A-01";
+      qtyInp.value = "0";
+      reorderInp.value = "10";
+      costInp.value = "1.00";
+      setScanMode("manual");
+      addModal.classList.add("show");
+      addModal.setAttribute("aria-hidden", "false");
+      setTimeout(()=>nameInp.focus(), 50);
+    }
+    function closeAddModal(){
+      addModal.classList.remove("show");
+      addModal.setAttribute("aria-hidden", "true");
+    }
+
+    document.getElementById("addItemBtn").addEventListener("click", openAddModal);
+    document.getElementById("cancelAdd").addEventListener("click", closeAddModal);
+    addModal.querySelector(".backdrop").addEventListener("click", closeAddModal);
+    document.addEventListener("keydown", (e)=>{ if(e.key === "Escape" && addModal.classList.contains("show")) closeAddModal(); });
+
+    // Add mode switch (Manual vs Barcode)
+    addSwitch.addEventListener("click", (e)=>{
+      if(e.target.tagName!=="BUTTON") return;
+      [...addSwitch.children].forEach(b=>b.classList.remove("active"));
+      e.target.classList.add("active");
+      setScanMode(e.target.dataset.mode);
+    });
+
+    function setScanMode(mode){
+      if(mode==="scan"){
+        scanHint.style.display = "block";
+        barcodePreview.style.display = "grid";
+        skuInp.placeholder = "Click here and scan barcode…";
+        // focus SKU for immediate scan
+        setTimeout(()=>skuInp.focus(), 50);
+      } else {
+        scanHint.style.display = "none";
+        barcodePreview.style.display = "none";
+        skuInp.placeholder = "Scan or generate…";
+      }
+    }
+
+    // Simple live "barcode" preview renderer from SKU input (procedural stripes)
+    skuInp.addEventListener("input", ()=>{
+      const code = skuInp.value.trim();
+      renderBarcodePreview(barcodePreview, code);
+    });
+    function renderBarcodePreview(container, code){
+      if(container.style.display==="none") return;
+      const w = container.clientWidth || 600;
+      const h = container.clientHeight || 80;
+      // Clear previous stripes
+      container.innerHTML = "";
+      // Create a canvas on the fly
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "rgba(255,255,255,0.02)";
+      ctx.fillRect(0,0,w,h);
+      // Draw stripes based on char codes
+      let x = 10;
+      for(let i=0;i<code.length;i++){
+        const v = (code.charCodeAt(i)*37 + i*17) % 100;
+        const barW = Math.max(1, (v % 4) + 1);
+        const gap = Math.max(1, (v % 3));
+        const barH = h - 20 - (v % 12);
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.fillRect(x, 10, barW, barH);
+        x += barW + gap;
+        if(x > w-20) break;
+      }
+      // Footer text
+      ctx.fillStyle = "rgba(255,255,255,0.6)";
+      ctx.font = "12px ui-sans-serif, system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(code || "Waiting for scan…", w/2, h-6);
+      container.appendChild(canvas);
+    }
+
+    // Save item
+    document.getElementById("saveAdd").addEventListener("click", ()=>{
+      if(!nameInp.value.trim()){
+        showToast("Please enter a name");
+        nameInp.focus();
+        return;
+      }
+      const it = {
+        sku: (skuInp.value.trim() || nanoid()).toUpperCase(),
+        name: nameInp.value.trim() || "Unnamed",
+        category: catInp.value.trim() || "General",
+        location: locInp.value.trim() || "A-01",
+        qty: Number.isFinite(+qtyInp.value) ? Math.max(0, +qtyInp.value) : 0,
+        reorder: Number.isFinite(+reorderInp.value) ? Math.max(0, +reorderInp.value) : 10,
+        cost: Number.isFinite(+costInp.value) ? Math.max(0, +(+costInp.value).toFixed(2)) : 0
+      };
+      useStore.getState().addItem(it);
+      useStore.getState().select(it.sku);
+      closeAddModal();
+      render();
+      showToast("Added " + it.sku);
+    });
+
+    // Generate SKU
+    document.getElementById("genSku").addEventListener("click", ()=>{
+      skuInp.value = nanoid();
+      renderBarcodePreview(barcodePreview, skuInp.value);
+      skuInp.focus();
+      skuInp.select();
+    });
+
+    // Allow Enter to submit when scanning (many scanners send Enter)
+    addForm.addEventListener("keydown", (e)=>{
+      if(e.key === "Enter"){
+        e.preventDefault();
+        document.getElementById("saveAdd").click();
+      }
+    });
+
+    document.getElementById("importBtn").addEventListener("click", ()=>{
+      // Simple in-page CSV importer using a hidden file input; falls back to demo if canceled
+      const picker = document.createElement("input");
+      picker.type = "file";
+      picker.accept = ".csv,text/csv";
+      picker.onchange = async () => {
+        const file = picker.files?.[0];
+        if(file){
+          const text = await file.text();
+          useStore.getState().importCSV(text);
+          render();
+          showToast("CSV imported (" + file.name + ")");
+        }
+      };
+      picker.click();
+      // Additionally, seed a tiny demo if no items yet
+      setTimeout(() => {
+        const s = useStore.getState();
+        if(s.items.length===0){
+          const demo = "sku,name,category,location,qty,reorder,cost\n" +
+                       `${nanoid()},Zen Clamp,Hardware,A-12,15,10,3.25\n` +
+                       `${nanoid()},Glacier Bottle,Beverages,B-02,0,20,1.10`;
+          s.importCSV(demo);
+          render();
+          showToast("Sample CSV imported");
+        }
+      }, 600);
+    });
+
+    document.getElementById("quickAdjust").addEventListener("click", ()=>{
+      const s = useStore.getState();
+      const current = s.selected ? s.items.find(i=>i.sku===s.selected) : s.items[0];
+      if(!current) return;
+      const delta = Math.random()<0.5 ? -Math.ceil(Math.random()*5) : Math.ceil(Math.random()*8);
+      s.adjust(current.sku, delta);
+      render();
+      showToast(`Adjusted ${current.sku} ${delta>0?"+":""}${delta}`);
+    });
+
+    // Search with Cmd/Ctrl+K
+    document.addEventListener("keydown", (e)=>{
+      if((e.metaKey || e.ctrlKey) && e.key.toLowerCase()==="k") {
+        e.preventDefault();
+        search.focus();
+      }
+    });
+    search.addEventListener("input", (e)=>{
+      useStore.getState().setFilter(e.target.value);
+      render();
+    });
+
+    // Planner chips
+    const plannerTags = ["7d", "14d", "30d", "90d"];
+    const plannerChips = document.getElementById("plannerChips");
+    plannerTags.forEach(t=>{
+      const c = document.createElement("span");
+      c.className = "chip";
+      c.textContent = "Lead " + t;
+      c.addEventListener("click", () => {
+        showToast("Planner lead set to " + t);
+      });
+      plannerChips.appendChild(c);
+    });
+
+    // Restock planner mock
+    function renderPlanner(){
+      const {items} = useStore.getState();
+      const soon = items.filter(i=>statusOf(i)!=="ok").slice(0,5);
+      document.getElementById("plan-soon").innerHTML = "";
+      document.getElementById("plan-po").innerHTML = "";
+      document.getElementById("plan-done").innerHTML = "";
+      soon.forEach(i=>{
+        const need = Math.max(0, i.reorder+10 - i.qty);
+        const el = document.createElement("div");
+        el.className="ticket";
+        el.innerHTML = `<div class="title">${i.name}</div><div class="meta">${i.sku} • Need ${need}</div>`;
+        el.addEventListener("click", ()=>{
+          useStore.getState().select(i.sku);
+          render();
+          showToast("Planning for " + i.sku);
+        });
+        document.getElementById("plan-soon").appendChild(el);
+      });
+    }
+
+    // Toast
+    let toastTimer = null;
+    function showToast(msg){
+      toast.textContent = msg;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(()=>toast.classList.remove("show"), 2000);
+    }
+
+    // Procedural "preview" asset rendering
+    function drawPreview(canvas, item){
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      if(w===0 || h===0) return;
+      canvas.width = w*dpr; canvas.height = h*dpr;
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // Background gradient based on SKU hash
+      const hue = hash(item.sku) % 360;
+      const grad = ctx.createLinearGradient(0, 0, w, h);
+      grad.addColorStop(0, `hsla(${(hue+40)%360}, 80%, 55%, 0.18)`);
+      grad.addColorStop(1, `hsla(${(hue+300)%360}, 70%, 50%, 0.10)`);
+      ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+
+      // Soft grid
+      ctx.strokeStyle = "rgba(255,255,255,0.04)";
+      ctx.lineWidth = 1;
+      for(let x=0; x<w; x+=20){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+      for(let y=0; y<h; y+=20){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+
+      // Iso-box representing item
+      const cx = w*0.32, cy = h*0.55;
+      const size = 50 + (hash(item.name) % 40);
+      drawIsoBox(ctx, cx, cy, size, `hsla(${hue}, 90%, 60%, 0.9)`);
+
+      // Wave sparkline for qty
+      drawSparkline(ctx, w*0.55, h*0.65, w*0.38, 40, item);
+
+      // Text
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.font = "700 16px Inter, system-ui, sans-serif";
+      ctx.fillText(item.name, 16, 26);
+      ctx.font = "600 12px Inter, system-ui, sans-serif";
+      ctx.fillStyle = "rgba(230,236,245,0.75)";
+      ctx.fillText(`SKU ${item.sku} • ${item.location}`, 16, 44);
+    }
+    function clearCanvas(canvas){
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0,0,canvas.width, canvas.height);
+    }
+    function hash(str){
+      let h = 2166136261 >>> 0;
+      for(let i=0;i<str.length;i++){
+        h ^= str.charCodeAt(i); h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    }
+    function drawIsoBox(ctx, x, y, s, color){
+      const h = s*0.6;
+      ctx.save();
+      // top
+      ctx.beginPath();
+      ctx.moveTo(x, y - h);
+      ctx.lineTo(x + s, y - h/2);
+      ctx.lineTo(x, y);
+      ctx.lineTo(x - s, y - h/2);
+      ctx.closePath();
+      ctx.fillStyle = shade(color, 1.0); ctx.fill();
+      // left
+      ctx.beginPath();
+      ctx.moveTo(x - s, y - h/2);
+      ctx.lineTo(x, y);
+      ctx.lineTo(x, y + h);
+      ctx.lineTo(x - s, y + h/2);
+      ctx.closePath();
+      ctx.fillStyle = shade(color, 0.75); ctx.fill();
+      // right
+      ctx.beginPath();
+      ctx.moveTo(x + s, y - h/2);
+      ctx.lineTo(x, y);
+      ctx.lineTo(x, y + h);
+      ctx.lineTo(x + s, y + h/2);
+      ctx.closePath();
+      ctx.fillStyle = shade(color, 0.6); ctx.fill();
+
+      // shine
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      ctx.beginPath();
+      ctx.ellipse(x + s*0.1, y - h*0.6, s*0.8, h*0.6, Math.PI/8, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+    function shade(hsla, mult){
+      const m = hsla.match(/hsla\((\d+),\s*(\d+)%?,\s*(\d+)%?,\s*([0-9.]+)\)/);
+      if(!m) return hsla;
+      const h = +m[1], s = +m[2], l = Math.min(100, Math.max(0, Math.round(+m[3]*mult))), a = +m[4];
+      return `hsla(${h}, ${s}%, ${l}%, ${a})`;
+    }
+    function drawSparkline(ctx, x, y, w, h, item){
+      const n = 24;
+      const base = Math.max(5, item.reorder*0.6);
+      const arr = Array.from({length:n}, (_,i) => base + Math.abs(Math.sin((i+hash(item.sku)) * 0.45)) * (item.qty+10) * 0.15 + Math.random()*2);
+      const max = Math.max(...arr);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.strokeStyle = "rgba(109,214,255,0.9)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for(let i=0;i<n;i++){
+        const px = (i/(n-1))*w;
+        const py = - (arr[i]/max)*h;
+        i?ctx.lineTo(px, py):ctx.moveTo(px, py);
+      }
+      ctx.stroke();
+      const grad = ctx.createLinearGradient(0, 0, 0, -h);
+      grad.addColorStop(0, "rgba(109,214,255,0.2)");
+      grad.addColorStop(1, "rgba(109,214,255,0.0)");
+      ctx.lineTo(w, 0); ctx.lineTo(0,0); ctx.closePath();
+      ctx.fillStyle = grad; ctx.fill();
+      ctx.restore();
+    }
+
+    // Resize preview
+    const ro = new ResizeObserver(()=>renderDetail());
+    ro.observe(detail.canvas);
+
+    // Initial render
+    render(); renderPlanner();
+
+    // Periodic planner refresh
+    setInterval(() => { renderPlanner() }, 1500);
+  </script>
+</body>
+</html>
