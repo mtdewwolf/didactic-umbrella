@@ -1,61 +1,84 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@/lib/store';
+import { useAuthStore } from '@/lib/auth';
 import AddItemModal from './AddItemModal';
 
 export default function Header() {
-  const { setFilter, importCSV } = useStore();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { filter, setFilter, importCSV } = useStore();
+  const { user, logout } = useAuthStore();
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilter(e.target.value);
-  };
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+K or Cmd+K to focus search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
 
-  const handleImport = () => {
-    const picker = document.createElement("input");
-    picker.type = "file";
-    picker.accept = ".csv,text/csv";
-    picker.onchange = async () => {
-      const file = picker.files?.[0];
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleImportCSV = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         const text = await file.text();
         await importCSV(text);
       }
     };
-    picker.click();
-  };
-
-  const handleAddItem = () => {
-    setIsModalOpen(true);
+    input.click();
   };
 
   return (
     <>
       <header className="appbar">
         <div className="appbar-inner">
-          <div className="brand">
-            <div className="logo" aria-hidden="true"></div>
-            <h1>GoldMine Distro — Inventory</h1>
-          </div>
-          <div className="searchbar">
-            <input 
-              id="search" 
-              placeholder="Search SKU, name, location, supplier…" 
-              onChange={handleSearch}
+                           <div className="brand">
+                   <img src="/logo.png" alt="GoldMine Distro" className="brand-logo" />
+                   <h1>GoldMine Distro — Inventory</h1>
+                 </div>
+          
+          <div className="search">
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search SKU, name, location... Ctrl+K"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
             />
-            <span className="kbd">⌘ K</span>
           </div>
+          
           <div className="actions">
-            <button className="btn" onClick={handleImport}>Import CSV</button>
-            <button className="btn primary" onClick={handleAddItem}>+ New Item</button>
+            <button className="btn btn-secondary" onClick={handleImportCSV}>
+              Import CSV
+            </button>
+            <button className="btn btn-primary" onClick={() => setAddModalOpen(true)}>
+              New Item
+            </button>
+            {user && (
+              <div className="user-menu">
+                <span className="user-name">{user.name || user.email}</span>
+                <button className="btn btn-sm btn-secondary" onClick={logout}>
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
-      
-      <AddItemModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+
+      <AddItemModal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
       />
     </>
   );

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
+import SupplierSelector from './SupplierSelector';
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -9,7 +10,7 @@ interface AddItemModalProps {
 }
 
 export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
-  const { addItem } = useStore();
+  const { addItem, orders, loadOrders } = useStore();
   const [formData, setFormData] = useState({
     sku: '',
     name: '',
@@ -17,144 +18,209 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
     location: 'A-01',
     qty: 0,
     reorder: 10,
-    cost: 1.00
+    cost: 1.00,
+    retail_price: 0,
+    wholesale_price: 0,
+    supplier_id: undefined as string | undefined,
+    order_id: undefined as string | undefined
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      loadOrders();
+    }
+  }, [isOpen, loadOrders]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim()) {
-      return;
+    try {
+      await addItem(formData);
+      onClose();
+      setFormData({
+        sku: '',
+        name: '',
+        category: '',
+        location: 'A-01',
+        qty: 0,
+        reorder: 10,
+        cost: 1.00,
+        retail_price: 0,
+        wholesale_price: 0,
+        supplier_id: undefined,
+        order_id: undefined
+      });
+    } catch (error) {
+      console.error('Failed to add item:', error);
     }
-
-    const newItem = {
-      sku: (formData.sku.trim() || generateSKU()).toUpperCase(),
-      name: formData.name.trim() || "Unnamed",
-      category: formData.category.trim() || "General",
-      location: formData.location.trim() || "A-01",
-      qty: Math.max(0, formData.qty),
-      reorder: Math.max(0, formData.reorder),
-      cost: Math.max(0, parseFloat(formData.cost.toString()))
-    };
-
-    await addItem(newItem);
-    onClose();
-    setFormData({
-      sku: '',
-      name: '',
-      category: '',
-      location: 'A-01',
-      qty: 0,
-      reorder: 10,
-      cost: 1.00
-    });
   };
 
   const generateSKU = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let id = '';
-    for (let i = 0; i < 8; i++) id += chars[Math.floor(Math.random() * chars.length)];
-    return id;
+    let sku = '';
+    for (let i = 0; i < 8; i++) {
+      sku += chars[Math.floor(Math.random() * chars.length)];
+    }
+    setFormData(prev => ({ ...prev, sku }));
   };
 
   const handleGenerateSKU = () => {
-    setFormData(prev => ({ ...prev, sku: generateSKU() }));
+    generateSKU();
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="modal show">
-      <div className="backdrop" onClick={onClose}></div>
-      <div className="dialog" role="dialog" aria-modal="true">
-        <div className="dialog-header">
-          <div className="dialog-title">Add New Item</div>
+      <div className="modal-content">
+        <div className="modal-header">
+          <h2>Add New Item</h2>
+          <button className="btn-close" onClick={onClose}>×</button>
         </div>
-        <div className="dialog-body">
-          <form onSubmit={handleSubmit}>
-            <div className="form-grid">
-              <div className="form-row">
-                <label htmlFor="sku">SKU</label>
-                <input
-                  type="text"
-                  id="sku"
-                  value={formData.sku}
-                  onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
-                  placeholder="Scan or generate…"
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="name">Name</label>
-                <input
-                  type="text"
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Item name"
-                  required
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="category">Category</label>
-                <input
-                  type="text"
-                  id="category"
-                  value={formData.category}
-                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                  placeholder="Category e.g. Hardware"
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="location">Location</label>
-                <input
-                  type="text"
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="A-01"
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="qty">Quantity</label>
-                <input
-                  type="number"
-                  id="qty"
-                  value={formData.qty}
-                  onChange={(e) => setFormData(prev => ({ ...prev, qty: parseInt(e.target.value) || 0 }))}
-                  min="0"
-                  step="1"
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="reorder">Reorder Point</label>
-                <input
-                  type="number"
-                  id="reorder"
-                  value={formData.reorder}
-                  onChange={(e) => setFormData(prev => ({ ...prev, reorder: parseInt(e.target.value) || 0 }))}
-                  min="0"
-                  step="1"
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="cost">Unit Cost</label>
-                <input
-                  type="number"
-                  id="cost"
-                  value={formData.cost}
-                  onChange={(e) => setFormData(prev => ({ ...prev, cost: parseFloat(e.target.value) || 0 }))}
-                  min="0"
-                  step="0.01"
-                />
-              </div>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>SKU</label>
+            <div className="sku-input-group">
+              <input
+                type="text"
+                value={formData.sku}
+                onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
+                required
+              />
+              <button type="button" className="btn btn-sm btn-secondary" onClick={handleGenerateSKU}>
+                Generate
+              </button>
             </div>
-          </form>
-        </div>
-        <div className="dialog-footer">
-          <button className="btn" onClick={onClose}>Cancel</button>
-          <button className="btn" onClick={handleGenerateSKU}>Generate SKU</button>
-          <button className="btn primary" onClick={handleSubmit}>Save Item</button>
-        </div>
+          </div>
+          
+          <div className="form-group">
+            <label>Name</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              required
+            />
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>Category</label>
+              <input
+                type="text"
+                value={formData.category}
+                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Location</label>
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                required
+              />
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label>Supplier</label>
+            <SupplierSelector
+              value={formData.supplier_id}
+              onChange={(supplierId) => setFormData(prev => ({ ...prev, supplier_id: supplierId }))}
+              placeholder="Select or create supplier..."
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Order (Optional)</label>
+            <select
+              value={formData.order_id || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, order_id: e.target.value || undefined }))}
+            >
+              <option value="">No Order</option>
+              {orders.map(order => (
+                <option key={order.id} value={order.id}>
+                  {order.order_number} - {order.supplier_name || 'Unknown Supplier'}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>Quantity</label>
+              <input
+                type="number"
+                value={formData.qty}
+                onChange={(e) => setFormData(prev => ({ ...prev, qty: parseInt(e.target.value) || 0 }))}
+                min="0"
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Reorder Point</label>
+              <input
+                type="number"
+                value={formData.reorder}
+                onChange={(e) => setFormData(prev => ({ ...prev, reorder: parseInt(e.target.value) || 0 }))}
+                min="0"
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Cost</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.cost}
+                onChange={(e) => setFormData(prev => ({ ...prev, cost: parseFloat(e.target.value) || 0 }))}
+                min="0"
+                required
+              />
+            </div>
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>Retail Price</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.retail_price}
+                onChange={(e) => setFormData(prev => ({ ...prev, retail_price: parseFloat(e.target.value) || 0 }))}
+                min="0"
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Wholesale Price</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.wholesale_price}
+                onChange={(e) => setFormData(prev => ({ ...prev, wholesale_price: parseFloat(e.target.value) || 0 }))}
+                min="0"
+                required
+              />
+            </div>
+          </div>
+          
+          <div className="modal-actions">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Add Item
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

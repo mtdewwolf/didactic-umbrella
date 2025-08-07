@@ -6,6 +6,21 @@ import path from 'path';
 const dbPath = path.join(process.cwd(), 'goldmine_distro.db');
 const db = new Database(dbPath);
 
+// Create activity_logs table if it doesn't exist
+db.exec(`
+  CREATE TABLE IF NOT EXISTS activity_logs (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL,
+    sku TEXT,
+    delta INTEGER,
+    count INTEGER,
+    at DATETIME NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_activity_type ON activity_logs(type);
+  CREATE INDEX IF NOT EXISTS idx_activity_at ON activity_logs(at);
+`);
+
 // Helper function to generate unique IDs
 function generateId(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

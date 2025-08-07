@@ -3,11 +3,10 @@
 import { useStore } from '@/lib/store';
 
 export default function Sidebar() {
-  const { setFilter } = useStore();
+  const { setFilter, currentView, setCurrentView } = useStore();
 
-  const handleNavClick = (view: string) => {
-    // Handle navigation view changes
-    console.log('Switched to', view);
+  const handleNavClick = (view: 'dashboard' | 'inventory' | 'orders' | 'suppliers' | 'locations' | 'items' | 'wholesale') => {
+    setCurrentView(view);
   };
 
   const handleWarehouseClick = (code: string) => {
@@ -26,11 +25,51 @@ export default function Sidebar() {
     <aside className="sidebar">
       <div className="nav-group">
         <div className="nav-title">Navigation</div>
-        <div className="nav-item active" onClick={() => handleNavClick('dashboard')}>Dashboard</div>
-        <div className="nav-item" onClick={() => handleNavClick('inventory')}>Inventory</div>
-        <div className="nav-item" onClick={() => handleNavClick('orders')}>Orders</div>
-        <div className="nav-item" onClick={() => handleNavClick('suppliers')}>Suppliers</div>
-        <div className="nav-item" onClick={() => handleNavClick('locations')}>Locations</div>
+        <div 
+          className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`} 
+          onClick={() => handleNavClick('dashboard')}
+        >
+          Dashboard
+        </div>
+        <div 
+          className={`nav-item ${currentView === 'inventory' ? 'active' : ''}`} 
+          onClick={() => handleNavClick('inventory')}
+        >
+          Inventory
+        </div>
+        <div 
+          className={`nav-item ${currentView === 'orders' ? 'active' : ''}`} 
+          onClick={() => handleNavClick('orders')}
+        >
+          Orders
+        </div>
+        <div 
+          className={`nav-item ${currentView === 'suppliers' ? 'active' : ''}`} 
+          onClick={() => handleNavClick('suppliers')}
+        >
+          Suppliers
+        </div>
+        <div 
+          className={`nav-item ${currentView === 'locations' ? 'active' : ''}`} 
+          onClick={() => handleNavClick('locations')}
+        >
+          Locations
+        </div>
+        <div 
+          className={`nav-item ${currentView === 'items' ? 'active' : ''}`} 
+          onClick={() => handleNavClick('items')}
+        >
+          Items
+        </div>
+      </div>
+      <div className="nav-group">
+        <div className="nav-title">Wholesale</div>
+        <div 
+          className={`nav-item ${currentView === 'wholesale' ? 'active' : ''}`} 
+          onClick={() => handleNavClick('wholesale')}
+        >
+          Wholesale Management
+        </div>
       </div>
       <div className="nav-group">
         <div className="nav-title">Quick Filters</div>
